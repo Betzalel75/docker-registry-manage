@@ -47,11 +47,33 @@ add_alias_if_not_exists() {
 
 download_script() {
     echo -e "${GREEN}[INFO] Téléchargement du script depuis GitHub...${NC}"
-    if ! curl -fsSL "$SCRIPT_URL" -o "$INSTALL_DIR/$SCRIPT_NAME"; then
-        echo -e "${RED}[ERREUR] Échec du téléchargement du script${NC}" >&2
-        exit 1
+    
+    # Vérifie quel outil de téléchargement est disponible
+    if command -v curl >/dev/null 2>&1; then
+        echo -e "${YELLOW}[INFO] Utilisation de curl pour le téléchargement${NC}"
+        if ! curl -fsSL "$SCRIPT_URL" -o "$INSTALL_DIR/$SCRIPT_NAME"; then
+            echo -e "${RED}[ERREUR] Échec du téléchargement avec curl${NC}" >&2
+            return 1
+        fi
+    elif command -v wget >/dev/null 2>&1; then
+        echo -e "${YELLOW}[INFO] Utilisation de wget pour le téléchargement${NC}"
+        if ! wget -q "$SCRIPT_URL" -O "$INSTALL_DIR/$SCRIPT_NAME"; then
+            echo -e "${RED}[ERREUR] Échec du téléchargement avec wget${NC}" >&2
+            return 1
+        fi
+    elif command -v wget2 >/dev/null 2>&1; then
+        echo -e "${YELLOW}[INFO] Utilisation de wget2 pour le téléchargement${NC}"
+        if ! wget2 -q "$SCRIPT_URL" -O "$INSTALL_DIR/$SCRIPT_NAME"; then
+            echo -e "${RED}[ERREUR] Échec du téléchargement avec wget2${NC}" >&2
+            return 1
+        fi
+    else
+        echo -e "${RED}[ERREUR] Aucun outil de téléchargement trouvé (curl, wget ou wget2 requis)${NC}" >&2
+        return 1
     fi
+    
     chmod +x "$INSTALL_DIR/$SCRIPT_NAME"
+    return 0
 }
 
 main() {
@@ -61,7 +83,10 @@ main() {
     mkdir -p "$INSTALL_DIR"
 
     # Télécharge et installe le script
-    download_script
+    if ! download_script; then
+        echo -e "${RED}[ERREUR] Impossible de télécharger le script${NC}" >&2
+        exit 1
+    fi
     echo -e "${GREEN}[OK] Script installé dans $INSTALL_DIR${NC}"
 
     # Ajout de l'alias dans le bon fichier RC
